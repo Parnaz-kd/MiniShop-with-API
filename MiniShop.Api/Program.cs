@@ -1,41 +1,61 @@
-var builder = WebApplication.CreateBuilder(args);
+using FluentValidation;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using MiniShop.Api.Application.DTOs;
+using MiniShop.Api.Application.Services.Implementations;
+using MiniShop.Api.Application.Services.Implementations.Policies;
+using MiniShop.Api.Application.Services.Interfaces;
+using MiniShop.Api.Application.Validation;
+using MiniShop.Api.Domain.Abstractions;
+using MiniShop.Api.Infrastructure.Persistence;
+using MiniShop.Api.Middleware;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+
+services.AddControllers();
+services.AddEndpointsApiExplorer();
+services.AddSwaggerGen();
+
+services.AddDbContext<MiniShopDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+
+services.AddHttpClient("PublicApiClient", c =>
+{
+    c.BaseAddress = new Uri("https://example.org/");
+});
+
+services.AddScoped<IValidator<CreateProductDto>, CreateProductValidator>();
+services.AddScoped<IValidator<CreateOrderDto>, CreateOrderValidator>();
+
+services.AddSingleton<ITaxPolicy>(new VatTaxPolicy(0.09m));
+services.AddTransient<IPriceRule>(_ => new PercentageDiscountRule(0.05m));
+services.AddTransient<IPriceRule, CouponDiscountRule>();
+services.AddTransient<IPriceCalculator, PriceCalculator>();
+
+services.AddSingleton<ICacheService, CacheService>();
+
+services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<RequestTimingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
+app.MapControllers();
 
-var summaries = new[]
+// Seed
+using (var scope = app.Services.CreateScope())
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var db = scope.ServiceProvider.GetRequiredService<MiniShopDbContext>();
+    await SeedData.EnsureSeedAsync(db);
+}
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

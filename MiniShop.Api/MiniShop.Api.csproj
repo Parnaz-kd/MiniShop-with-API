@@ -16,12 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Application\Services\Interfaces\" />
-    <Folder Include="Application\Services\Implementations\" />
     <Folder Include="Infrastructure\Repositories\" />
-    <Folder Include="Infrastructure\Persistence\" />
-    <Folder Include="Middleware\" />
-    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>
