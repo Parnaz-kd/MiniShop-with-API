@@ -37,6 +37,6 @@ namespace MiniShop.Api.Controllers
 
 
         [HttpGet("health")]
-        public ActionResult Health() => Ok(new { ok = true, time = DateTime.UtcNow });
+        public ActionResult Health() => Ok(new { ok = true, time = DateTime.Now });
     }
 }

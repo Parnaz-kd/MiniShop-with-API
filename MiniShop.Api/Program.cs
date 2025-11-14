@@ -17,7 +17,10 @@ services.AddControllers();
 services.AddEndpointsApiExplorer();
 services.AddSwaggerGen();
 
-services.AddDbContext<MiniShopDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+//services.AddDbContext<MiniShopDbContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+services.AddDbContext<MiniShopDbContext>(options =>
+    options.UseInMemoryDatabase("minishop"));
+
 
 services.AddHttpClient("PublicApiClient", c =>
 {
